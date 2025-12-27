@@ -23,6 +23,16 @@ This plugin uses libuv filesystem watchers to detect changes instantly and trigg
 
 - Neovim >= 0.10 (requires `vim.uv`)
 
+### Note for tmux users
+
+If you run Neovim inside tmux, add this to your `~/.tmux.conf`:
+
+```tmux
+set -g focus-events on
+```
+
+This allows tmux to pass focus events through to Neovim, enabling `FocusGained` triggers when you switch panes or windows.
+
 ## Installation
 
 ### lazy.nvim
