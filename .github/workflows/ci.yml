@@ -16,3 +16,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: latest
           args: --check .
+
+  checkhealth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+      - name: Run checkhealth
+        run: |
+          nvim --headless +"set rtp+=." +"checkhealth live-autoread" +"w! health.log" +"qa!"
+          cat health.log
+          grep -q "ERROR" health.log && exit 1 || exit 0
