@@ -37,9 +37,7 @@ local function debug(msg)
 end
 
 local function is_normal_file_buf(bufnr)
-  return vim.api.nvim_buf_is_valid(bufnr)
-    and vim.bo[bufnr].buftype == ""
-    and vim.api.nvim_buf_get_name(bufnr) ~= ""
+  return vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buftype == "" and vim.api.nvim_buf_get_name(bufnr) ~= ""
 end
 
 local function buf_visible_in_current_tab(bufnr)
@@ -53,9 +51,15 @@ end
 
 local function close_watch(bufnr)
   local h = handle_by_buf[bufnr]
-  if not h then return end
-  pcall(function() h:stop() end)
-  pcall(function() h:close() end)
+  if not h then
+    return
+  end
+  pcall(function()
+    h:stop()
+  end)
+  pcall(function()
+    h:close()
+  end)
   handle_by_buf[bufnr] = nil
   path_by_buf[bufnr] = nil
   last_ms_by_buf[bufnr] = nil
@@ -63,8 +67,12 @@ local function close_watch(bufnr)
 end
 
 local function checktime_buf(bufnr, path)
-  if not is_normal_file_buf(bufnr) then return end
-  if not buf_visible_in_current_tab(bufnr) then return end
+  if not is_normal_file_buf(bufnr) then
+    return
+  end
+  if not buf_visible_in_current_tab(bufnr) then
+    return
+  end
 
   if vim.bo[bufnr].modified then
     if cfg.notify_on_conflict then
@@ -94,11 +102,17 @@ local function debounce_ok(bufnr)
 end
 
 local function start_watch(bufnr)
-  if not is_normal_file_buf(bufnr) then return end
-  if handle_by_buf[bufnr] then return end
+  if not is_normal_file_buf(bufnr) then
+    return
+  end
+  if handle_by_buf[bufnr] then
+    return
+  end
 
   local path = vim.api.nvim_buf_get_name(bufnr)
-  if path == "" then return end
+  if path == "" then
+    return
+  end
 
   local st = uv.fs_stat(path)
   if not st or st.type ~= "file" then
@@ -124,7 +138,9 @@ local function start_watch(bufnr)
         return
       end
 
-      if not debounce_ok(bufnr) then return end
+      if not debounce_ok(bufnr) then
+        return
+      end
 
       vim.schedule(function()
         -- Buffer might have been wiped while events were queued
@@ -167,7 +183,9 @@ local function start_watch(bufnr)
   end)
 
   if not ok then
-    pcall(function() h:close() end)
+    pcall(function()
+      h:close()
+    end)
     handle_by_buf[bufnr] = nil
     path_by_buf[bufnr] = nil
     vim.notify("[live-autoread] failed to start watcher: " .. tostring(err), vim.log.levels.ERROR)
@@ -191,7 +209,9 @@ function M.setup(user_cfg)
     group = aug,
     pattern = "*",
     callback = function()
-      if vim.fn.mode() ~= "c" then vim.cmd("checktime") end
+      if vim.fn.mode() ~= "c" then
+        vim.cmd("checktime")
+      end
       start_watch(vim.api.nvim_get_current_buf())
     end,
   })
@@ -241,6 +261,14 @@ function M.stop()
   for bufnr, _ in pairs(handle_by_buf) do
     close_watch(bufnr)
   end
+end
+
+function M.status()
+  local watchers = {}
+  for bufnr, _ in pairs(handle_by_buf) do
+    table.insert(watchers, { bufnr = bufnr, path = path_by_buf[bufnr] })
+  end
+  return watchers
 end
 
 return M
