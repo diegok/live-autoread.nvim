@@ -1,11 +1,11 @@
 --
--- True auto-refresh for *visible* buffers (current tab/splits).
+-- Live filesystem watching for visible buffers, plus standard autoread for all.
 --
 -- Behavior:
--- - Always sets vim.o.autoread = true
--- - Runs :checktime on FocusGained/BufEnter (so hidden buffers update when you visit them)
--- - Adds libuv fs-event watchers that trigger :checktime ONLY when the buffer is visible
---   in the current tabpage (on screen).
+-- - Sets vim.o.autoread = true (baseline for all buffers)
+-- - Runs :checktime on FocusGained/BufEnter (hidden buffers update when visited)
+-- - Adds libuv fs-event watchers for real-time reload of *visible* buffers
+--   (current tabpage only) without needing focus change.
 -- - If buffer is modified, warns instead.
 --
 
