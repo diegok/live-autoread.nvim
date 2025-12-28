@@ -66,7 +66,7 @@ local function close_watch(bufnr)
   debug("stopped watcher for bufnr=" .. tostring(bufnr))
 end
 
-local function checktime_buf(bufnr, path)
+local function checktime_buf(bufnr, path, restart_watcher)
   if not is_normal_file_buf(bufnr) then
     return
   end
@@ -87,6 +87,12 @@ local function checktime_buf(bufnr, path)
 
   if cfg.notify_on_reload then
     vim.notify(vim.fn.fnamemodify(path, ":.") .. " reloaded (external change)", vim.log.levels.INFO)
+  end
+
+  -- Restart watcher after checktime to ensure fresh inode tracking
+  if restart_watcher then
+    close_watch(bufnr)
+    start_watch(bufnr)
   end
 end
 
@@ -171,13 +177,15 @@ local function start_watch(bufnr)
           vim.defer_fn(function()
             if vim.api.nvim_buf_is_valid(bufnr) then
               start_watch(bufnr)
-              checktime_buf(bufnr, cur_path)
+              -- Don't restart again here since we just started
+              checktime_buf(bufnr, cur_path, false)
             end
           end, 80)
           return
         end
 
-        checktime_buf(bufnr, cur_path)
+        -- Always restart watcher after reload to ensure fresh inode tracking
+        checktime_buf(bufnr, cur_path, true)
       end)
     end)
   end)
@@ -212,7 +220,10 @@ function M.setup(user_cfg)
       if vim.fn.mode() ~= "c" then
         vim.cmd("checktime")
       end
-      start_watch(vim.api.nvim_get_current_buf())
+      -- Always restart watcher on focus to handle stale inode after atomic saves
+      local bufnr = vim.api.nvim_get_current_buf()
+      close_watch(bufnr)
+      start_watch(bufnr)
     end,
   })
 
