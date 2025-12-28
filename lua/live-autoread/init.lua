@@ -66,11 +66,10 @@ local function close_watch(bufnr)
   debug("stopped watcher for bufnr=" .. tostring(bufnr))
 end
 
+local start_watch
+
 local function checktime_buf(bufnr, path, restart_watcher)
-  if not is_normal_file_buf(bufnr) then
-    return
-  end
-  if not buf_visible_in_current_tab(bufnr) then
+  if not is_normal_file_buf(bufnr) or not buf_visible_in_current_tab(bufnr) then
     return
   end
 
@@ -107,19 +106,12 @@ local function debounce_ok(bufnr)
   return true
 end
 
-local function start_watch(bufnr)
-  if not is_normal_file_buf(bufnr) then
-    return
-  end
-  if handle_by_buf[bufnr] then
+start_watch = function(bufnr)
+  if not is_normal_file_buf(bufnr) or handle_by_buf[bufnr] then
     return
   end
 
   local path = vim.api.nvim_buf_get_name(bufnr)
-  if path == "" then
-    return
-  end
-
   local st = uv.fs_stat(path)
   if not st or st.type ~= "file" then
     debug("not a file, skip watch: " .. path)
@@ -149,14 +141,8 @@ local function start_watch(bufnr)
       end
 
       vim.schedule(function()
-        -- Buffer might have been wiped while events were queued
-        if not vim.api.nvim_buf_is_valid(bufnr) then
-          close_watch(bufnr)
-          return
-        end
-
         local cur_path = vim.api.nvim_buf_get_name(bufnr)
-        if cur_path == "" then
+        if not vim.api.nvim_buf_is_valid(bufnr) or cur_path == "" then
           close_watch(bufnr)
           return
         end
